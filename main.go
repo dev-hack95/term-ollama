@@ -179,49 +179,49 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC, tea.KeyEsc:
 			return m, tea.Quit
 		case tea.KeyEnter:
-			if m.search == false {
-				prompt := m.textInput.Value()
-				if strings.TrimSpace(prompt) == "" {
+			prompt := m.textInput.Value()
+			if strings.TrimSpace(prompt) == "" {
+				return m, nil
+			}
+
+			promptMsg := propmtStyle.Render(fmt.Sprintf("> %s", prompt))
+			m.messages = append(m.messages, promptMsg)
+			m.viewport.SetContent(strings.Join(m.messages, "\n\n"))
+			m.viewport.GotoBottom()
+
+			m.textInput.Reset()
+			m.textInput.Blur()
+			m.isProcessing = true
+
+			if strings.HasPrefix(prompt, "/new") {
+				err := utilities.SaveSession(m.db, m.memory)
+
+				if err == nil {
+					m.isProcessing = false
+					m.textInput.Focus()
+					m.messages = []string{}
+					m.memory = []structs.Message{}
+
+					m.messages = append(m.messages, infoStyle.Render("New Session"))
+					m.viewport.SetContent(strings.Join(m.messages, "\n\n"))
+					m.viewport.GotoBottom()
 					return m, nil
 				}
 
-				promptMsg := propmtStyle.Render(fmt.Sprintf("> %s", prompt))
-				m.messages = append(m.messages, promptMsg)
-				m.viewport.SetContent(strings.Join(m.messages, "\n\n"))
-				m.viewport.GotoBottom()
-
-				m.textInput.Reset()
-				m.textInput.Blur()
-				m.isProcessing = true
-
-				if strings.HasPrefix(prompt, "/new") {
-					err := utilities.SaveSession(m.db, m.memory)
-
-					if err == nil {
-						m.isProcessing = false
-						m.textInput.Focus()
-						m.messages = []string{}
-						m.memory = []structs.Message{}
-
-						m.messages = append(m.messages, infoStyle.Render("New Session"))
-						m.viewport.SetContent(strings.Join(m.messages, "\n\n"))
-						m.viewport.GotoBottom()
-						return m, nil
-					}
-
-					if err != nil {
-						return m, nil
-					}
+				if err != nil {
+					return m, nil
 				}
+			}
 
-				if strings.HasPrefix(prompt, "/bye") {
-					return m, tea.Quit
-				}
+			if strings.HasPrefix(prompt, "/bye") {
+				return m, tea.Quit
+			}
 
-				var message structs.Message
-				message.Role = "user"
-				message.Content = prompt
+			var message structs.Message
+			message.Role = "user"
+			message.Content = prompt
 
+			if m.search == false {
 				m.memory = append(m.memory, message)
 				cmds = append(cmds, m.promptResponse(m.memory))
 				cmds = append(cmds, spinner.Tick)
@@ -308,7 +308,7 @@ func main() {
 	)
 
 	if _, err := p.Run(); err != nil {
-		fmt.Println("Error: " + err.Error())
+		log.Println("Error: " + err.Error())
 		os.Exit(1)
 	}
 
