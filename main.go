@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/dev-hack95/mini/client"
 	"github.com/dev-hack95/mini/structs"
@@ -256,6 +257,46 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.viewport.GotoBottom()
 					return m, nil
 				}
+			}
+
+			if strings.HasPrefix(prompt, "/autosave") {
+				m.isProcessing = false
+				m.textInput.Focus()
+				m.messages = []string{}
+				m.memory = []structs.Message{}
+
+				var confirm bool
+				err := huh.NewConfirm().
+					Title("Are you sure?").
+					Affirmative("On").
+					Negative("Off").
+					Value(&confirm).Run()
+
+				if err != nil {
+					m.renderMarkdown(err.Error())
+				}
+
+				if confirm {
+					err1 := utilities.AutoSave(true)
+					if err1 != nil {
+						m.renderMarkdown(err1.Error())
+					}
+				} else {
+					err2 := utilities.AutoSave(false)
+					if err2 != nil {
+						m.renderMarkdown(err2.Error())
+					}
+				}
+
+				if confirm {
+					m.messages = append(m.messages, infoStyle.Render("Autosave enabled"))
+				} else {
+					m.messages = append(m.messages, infoStyle.Render("Autosave disabled"))
+				}
+				m.viewport.SetContent(strings.Join(m.messages, "\n\n"))
+				m.viewport.GotoBottom()
+
+				return m, nil
 			}
 
 			if strings.HasPrefix(prompt, "/bye") {

@@ -177,3 +177,42 @@ func SettingsConfig(filePath string) (*settingsConfig, error) {
 
 	return &data, nil
 }
+
+func AutoSave(value bool) error {
+	var data settingsConfig
+	homeDir, err := os.UserHomeDir()
+
+	if err != nil {
+		return err
+	}
+
+	filePath := homeDir + "/.term-ollama/settings.yaml"
+
+	yamlFile, err := os.ReadFile(filePath)
+
+	if err != nil {
+		return err
+	}
+
+	err = yaml.Unmarshal(yamlFile, &data)
+
+	if err != nil {
+		return err
+	}
+
+	data.AutoSave = value
+
+	yamlData, err3 := yaml.Marshal(&data)
+
+	if err3 != nil {
+		return err3
+	}
+
+	err4 := os.WriteFile(filePath, yamlData, 0755)
+
+	if err4 != nil {
+		return err4
+	}
+
+	return nil
+}
