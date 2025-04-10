@@ -17,6 +17,10 @@ type clientConfig struct {
 	Stream bool   `json:"stream"`
 }
 
+type settingsConfig struct {
+	AutoSave bool `json:"auto_save"`
+}
+
 func CheckFileExist(filePath string) (clientConfig, error) {
 	var data clientConfig
 
@@ -122,4 +126,54 @@ func SessionDB(filePath string) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func SettingsConfig(filePath string) (*settingsConfig, error) {
+	var data settingsConfig
+
+	homeDir, err := os.UserHomeDir()
+
+	if err != nil {
+		return nil, err
+	}
+
+	filePath = homeDir + filePath
+	_, err = os.Stat(filePath)
+
+	if err != nil {
+		dirPath := filepath.Join(homeDir, ".term-ollama")
+
+		file_path := filepath.Join(dirPath, "settings.yaml")
+
+		settingsConfig := settingsConfig{
+			AutoSave: false,
+		}
+
+		yamlData, err3 := yaml.Marshal(&settingsConfig)
+
+		if err3 != nil {
+			return nil, err3
+		}
+
+		err4 := os.WriteFile(file_path, yamlData, 0755)
+
+		if err4 != nil {
+			return nil, err4
+		}
+
+	}
+
+	yamlFile, err := os.ReadFile(filePath)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = yaml.Unmarshal(yamlFile, &data)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &data, nil
 }

@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# List of target platforms (OS/Architecture)
 platforms=(
   "darwin/amd64"
   "darwin/arm64"

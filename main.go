@@ -84,6 +84,12 @@ func initModel() *model {
 		os.Exit(1)
 	}
 
+	settings, err := utilities.SettingsConfig("/.term-ollama/settings.yaml")
+
+	if err != nil {
+		os.Exit(1)
+	}
+
 	return &model{
 		textInput:    ti,
 		spinner:      sp,
@@ -94,7 +100,7 @@ func initModel() *model {
 		isProcessing: false,
 		ready:        false,
 		search:       false,
-		autosave:     false,
+		autosave:     settings.AutoSave,
 		err:          nil,
 		mdRenderer:   renderer,
 	}
@@ -169,7 +175,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.isProcessing {
 			switch msg.Type {
 			case tea.KeyCtrlC:
+				if m.autosave {
+					err := utilities.SaveSession(m.db, m.memory)
+
+					if err != nil {
+						return m, tea.Quit
+					}
+				}
+
 				return m, tea.Quit
+
 			default:
 				return m, nil
 			}
@@ -177,7 +192,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		switch msg.Type {
 		case tea.KeyCtrlC, tea.KeyEsc:
+			if m.autosave {
+				err := utilities.SaveSession(m.db, m.memory)
+
+				if err != nil {
+					return m, tea.Quit
+				}
+			}
 			return m, tea.Quit
+
 		case tea.KeyEnter:
 			prompt := m.textInput.Value()
 			if strings.TrimSpace(prompt) == "" {
@@ -193,10 +216,36 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.textInput.Blur()
 			m.isProcessing = true
 
+			///////////////////////////////// Special Terminal commands ////////////////////////////////////////////
+
 			if strings.HasPrefix(prompt, "/new") {
+
+				if m.autosave {
+					err := utilities.SaveSession(m.db, m.memory)
+
+					if err != nil {
+						return m, nil
+					}
+				}
+
+				m.isProcessing = false
+				m.textInput.Focus()
+				m.messages = []string{}
+				m.memory = []structs.Message{}
+
+				m.messages = append(m.messages, infoStyle.Render("New Session"))
+				m.viewport.SetContent(strings.Join(m.messages, "\n\n"))
+				m.viewport.GotoBottom()
+				return m, nil
+			}
+
+			if strings.HasPrefix(prompt, "/save") {
+
 				err := utilities.SaveSession(m.db, m.memory)
 
-				if err == nil {
+				if err != nil {
+					return m, nil
+				} else {
 					m.isProcessing = false
 					m.textInput.Focus()
 					m.messages = []string{}
@@ -207,21 +256,26 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.viewport.GotoBottom()
 					return m, nil
 				}
-
-				if err != nil {
-					return m, nil
-				}
 			}
 
 			if strings.HasPrefix(prompt, "/bye") {
+				if m.autosave {
+					err := utilities.SaveSession(m.db, m.memory)
+
+					if err != nil {
+						return m, nil
+					}
+				}
+
 				return m, tea.Quit
 			}
 
-			var message structs.Message
-			message.Role = "user"
-			message.Content = prompt
+			/////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 			if m.search == false {
+				var message structs.Message
+				message.Role = "user"
+				message.Content = prompt
 				m.memory = append(m.memory, message)
 				cmds = append(cmds, m.promptResponse(m.memory))
 				cmds = append(cmds, spinner.Tick)
