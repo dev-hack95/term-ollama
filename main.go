@@ -267,7 +267,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				var confirm bool
 				err := huh.NewConfirm().
-					Title("Are you sure?").
+					Title("AutoSave").
 					Affirmative("On").
 					Negative("Off").
 					Value(&confirm).Run()
