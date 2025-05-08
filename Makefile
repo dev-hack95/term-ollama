@@ -8,3 +8,6 @@ whisper:
 
 run:
 	@go run main.go
+
+build:
+	@go build -o term-ollama main.go
