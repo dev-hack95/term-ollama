@@ -9,4 +9,6 @@
          make build
      ```
 
+  * **Recomended-llm**: ollama pull granite3.1-moe (run before binary)
+  
   * Note: Install ollama after first run it will create a file at location of your home dir .term-ollma you can change model fron there
